@@ -1,0 +1,216 @@
+//@version=5
+indicator("4 Indicator Signal Strategy",overlay=true)
+
+ema_signal() =>
+     // EMA length for 20 days
+    ema20 = ta.ema(close[1], 20)
+    ema50 = ta.ema(close[1], 50)
+    ema100 = ta.ema(close[1], 100)
+    ema200=ta.ema(close[1],200)
+    var string Signal = na
+
+    if  (close[1] > ema20 and ema20>ema50 and ema50>ema100 and ema100>ema200)
+        Signal:="Strong Buy"
+    else if (close[1]<ema20 and ema20>ema50 and ema50>ema100 and ema100>ema200)
+        Signal:="Weak  Buy"
+    else if (close[1] <ema20 and ema20<ema50 and ema50<ema100 and ema100<ema200)
+        Signal:="Strong Sell"
+    else if (close[1]>ema20 and ema20<ema50 and ema50<ema100 and ema100<ema200)
+        Signal:="Weak Sell"
+    else
+        Signal:="No Signal"
+    Signal
+
+ema_signal_pre() =>
+     // EMA length for 20 days
+    ema20 = ta.ema(close[2], 20)
+    ema50 = ta.ema(close[2], 50)
+    ema100 = ta.ema(close[2], 100)
+    ema200=ta.ema(close[2],200)
+    var string Signal = na
+
+    if  (close[2] > ema20 and ema20>ema50 and ema50>ema100 and ema100>ema200)
+        Signal:="Strong Buy"
+    else if (close[2]<ema20 and ema20>ema50 and ema50>ema100 and ema100>ema200)
+        Signal:="Weak  Buy"
+    else if (close[2] <ema20 and ema20<ema50 and ema50<ema100 and ema100<ema200)
+        Signal:="Strong Sell"
+    else if (close[2]>ema20 and ema20<ema50 and ema50<ema100 and ema100<ema200)
+        Signal:="Weak Sell"
+    else
+        Signal:="No Signal"
+    Signal
+
+
+// Bollinger Bands Signal Function
+bollingerBandsSignal() =>
+
+    length = input.int(20, minval=1)
+    src = input(close, title="Source")
+    mult = input.float(2.0, minval=0.001, maxval=50, title="StdDev")
+    basis = ta.sma(src, length)
+    dev = mult * ta.stdev(close[1], length)
+    upper = basis + dev
+    lower = basis - dev
+    bbw = (upper-lower)
+    hhl= input(5)
+    lowwst = input(3)
+    b= ta.highest(bbw,hhl)
+    c= ta.lowest(bbw,lowwst)
+    var string Signal_bb = na
+    width=(upper-lower)
+    if width >= b and (upper) < close[1]
+        Signal_bb := "Buy"
+
+    else if (lower) > close[1] and width >= b
+        Signal_bb:="Sell"
+    else
+        Signal_bb:="No signal"
+    Signal_bb
+
+
+round_(val) => 
+    val > .99 ? .999 : val < -.99 ? -.999 : val
+
+fisherTransformSignal() =>
+    var string Signal_ft = na
+    high_ = ta.highest(hl2, 9)
+    low_ = ta.lowest(hl2, 9)
+    // round_(val) => val > .99 ? .999 : val < -.99 ? -.999 : val
+    value = 0.0
+    value := round_(.66 * ((hl2 - low_) / (high_ - low_) - .5) + .67 * nz(value[1]))
+    fisherT = 0.0
+    fisherT := .5 * math.log((1 + value) / (1 - value)) + .5 * nz(fisherT[1])
+    fish2 = fisherT[1]
+    crossover_condition = ta.crossover(fisherT, fish2 )
+    crossunder_condition = ta.crossunder(fisherT, fish2 )
+
+    if (fisherT > 5) and crossunder_condition
+        Signal_ft := "Strong Sell"
+
+    else if (fisherT > 3 and fisherT < 5) and crossunder_condition
+
+        Signal_ft := "Weak Sell"
+
+    else if (fisherT < -3 and fisherT >-5) and crossover_condition
+
+        Signal_ft := "Weak Buy"
+    else if fisherT<-5 and crossover_condition
+        Signal_ft := "Strong Buy"
+
+    else
+        Signal_ft := "No signal"
+
+    Signal_ft
+
+
+// MACD Signal Function
+macdSignal() =>
+    // Calculate MACD
+    macd= ta.ema(close[1], 13) - ta.ema(close[1], 48)
+    signal = ta.ema(macd, 9)
+    histogram = macd - signal
+    crossover_condition = ta.crossover(macd, signal)
+    crossunder_condition = ta.crossunder(macd, signal)
+    var string Signal_macd = na
+
+    if (histogram)>0  and macd>0
+        Signal_macd:="Strong Buy"
+    else if (histogram)>0 and macd<0
+        Signal_macd:="Weak Buy"
+    else if histogram<0 and macd<0
+        Signal_macd:="Strong Sell"
+    else if histogram<0 and macd>0
+        Signal_macd:="Weak Sell"
+    else
+        Signal_macd:="No Signal"
+
+    Signal_macd
+
+var testTable = table.new(position = position.top_right, columns = 2, rows = 5, bgcolor = color.yellow, border_width = 1)
+
+Signal_EMA = ema_signal()
+Signal_EMA_pre = ema_signal_pre()
+Signal_bb = bollingerBandsSignal()
+Signal_macd= macdSignal()
+Signal_ft=fisherTransformSignal()
+
+condition1 = (Signal_EMA=="No Signal")
+condition2 = (Signal_EMA=="Strong Buy")
+condition3 = (Signal_EMA=="Strong Sell")
+condition4 = (Signal_EMA=="Weak Buy")
+condition5 = (Signal_EMA=="Weak Sell")
+
+condition6 = (Signal_macd=="No Signal")
+condition7 = (Signal_macd=="Strong Buy")
+condition8 = (Signal_macd=="Strong Sell")
+condition9 = (Signal_macd=="Weak Buy")
+condition10 = (Signal_macd=="Weak Sell")
+
+condition11 = (Signal_bb=="Buy")
+condition12 = (Signal_bb=="Sell")
+condition13 = (Signal_bb=="No Signal")
+
+condition14 = (Signal_ft=="Weak Sell")
+condition15 = (Signal_ft=="Weak Buy")
+condition16 = (Signal_ft=="Strong Buy")
+condition17 = (Signal_ft=="Strong Sell")
+condition18 = (Signal_ft=="No Signal")
+
+
+// Plot buy and sell signals on the first candle of occurrence
+plotshape((Signal_EMA=="Strong Buy") and (Signal_EMA_pre != "Strong Buy") , style=shape.triangleup, location=location.belowbar, color=color.green, size=size.auto, title="ESB", text = "ESB")
+plotshape((Signal_EMA=="Strong Sell") and (Signal_EMA_pre != "Strong Sell"), style=shape.triangledown, location=location.abovebar, color=color.red, size=size.auto, title="ESS", text="ESS")
+plotshape((Signal_EMA=="Week Buy") and (Signal_EMA_pre != "Week Buy") , style=shape.triangleup, location=location.belowbar, color=color.green, size=size.auto, title="EWB", text = "EWB")
+plotshape((Signal_EMA=="Week Sell") and (Signal_EMA_pre != "Week Sell") , style=shape.triangledown, location=location.abovebar, color=color.red, size=size.auto, title="EWS", text = "EWS")
+
+plotshape((Signal_EMA!="Strong Buy") and (Signal_EMA_pre == "Strong Buy") , style=shape.triangledown, location=location.abovebar, color=color.gray, size=size.auto, title="EC", text = "EC")
+plotshape((Signal_EMA!="Strong Sell") and (Signal_EMA_pre == "Strong Sell"), style=shape.triangleup, location=location.belowbar, color=color.gray, size=size.auto, title="ESS", text="EC")
+plotshape((Signal_EMA=="Week Buy") and (Signal_EMA_pre != "Week Buy") , style=shape.triangledown, location=location.abovebar, color=color.gray, size=size.auto, title="EC", text = "EC")
+plotshape((Signal_EMA=="Week Sell") and (Signal_EMA_pre != "Week Sell") , style=shape.triangleup, location=location.belowbar, color=color.gray, size=size.auto, title="EC", text = "EC")
+
+
+plotshape((Signal_macd=="Strong Buy") and (Signal_macd[1] != "Strong Buy") , style=shape.triangleup, location=location.belowbar, color=color.green, size=size.auto, title="MSB", text = "MSB")
+plotshape((Signal_macd=="Strong Sell") and (Signal_macd[1] != "Strong Sell"), style=shape.triangledown, location=location.abovebar, color=color.red, size=size.auto, title="MSS", text="MSS")
+plotshape((Signal_macd=="Week Buy") and (Signal_macd[1] != "Week Buy") , style=shape.triangleup, location=location.belowbar, color=color.green, size=size.auto, title="MWB", text = "MWB")
+plotshape((Signal_macd=="Week Sell") and (Signal_macd[1] != "Week Sell") , style=shape.triangledown, location=location.abovebar, color=color.red, size=size.auto, title="MWS", text = "MWS")
+
+plotshape((Signal_macd!="Strong Buy") and (Signal_macd == "Strong Buy") , style=shape.triangledown, location=location.abovebar, color=color.gray, size=size.auto, title="MacdC", text = "MacdC")
+plotshape((Signal_macd!="Strong Sell") and (Signal_macd == "Strong Sell"), style=shape.triangleup, location=location.belowbar, color=color.gray, size=size.auto, title="MacdC", text="MacdC")
+plotshape((Signal_macd=="Week Buy") and (Signal_macd != "Week Buy") , style=shape.triangledown, location=location.abovebar, color=color.gray, size=size.auto, title="MacdC", text = "MacdC")
+plotshape((Signal_macd=="Week Sell") and (Signal_macd != "Week Sell") , style=shape.triangleup, location=location.belowbar, color=color.gray, size=size.auto, title="MacdC", text = "MacdC")
+
+
+
+
+plotshape((Signal_bb=="Buy") and (Signal_bb[1] !="Buy") , style=shape.triangleup, location=location.belowbar, color=color.green, size=size.auto, title="BB", text = "BB")
+plotshape((Signal_bb=="Sell") and (Signal_bb[1] !="Sell") , style=shape.triangledown, location=location.abovebar, color=color.red, size=size.auto, title="BS", text = "BS")
+
+plotshape((Signal_bb!="Buy") and (Signal_bb[1] =="Buy") , style=shape.triangledown, location=location.abovebar, color=color.gray, size=size.auto, title="BolC", text = "BolC")
+plotshape((Signal_bb!="Sell") and (Signal_bb[1] =="Sell") , style=shape.triangleup, location=location.belowbar, color=color.gray, size=size.auto, title="BolC", text = "BolC")
+
+
+plotshape((Signal_ft=="Strong Buy") and (Signal_ft[1] != "Strong Buy") , style=shape.triangleup, location=location.belowbar, color=color.green, size=size.auto, title="FSB", text = "FSB")
+plotshape((Signal_ft=="Strong Sell") and (Signal_ft[1] != "Strong Sell"), style=shape.triangledown, location=location.abovebar, color=color.red, size=size.auto, title="FSS", text="FSS")
+plotshape((Signal_ft=="Week Buy") and (Signal_ft[1] != "Week Buy") , style=shape.triangleup, location=location.belowbar, color=color.green, size=size.auto, title="FWB", text = "BWB")
+plotshape((Signal_ft=="Week Sell") and (Signal_ft[1] != "Week Sell") , style=shape.triangledown, location=location.abovebar, color=color.red, size=size.auto, title="FWS", text = "FWS")
+
+plotshape((Signal_ft!="Strong Buy") and (Signal_ft == "Strong Buy") , style=shape.triangledown, location=location.abovebar, color=color.gray, size=size.auto, title="FC", text = "FC")
+plotshape((Signal_ft!="Strong Sell") and (Signal_ft == "Strong Sell"), style=shape.triangleup, location=location.belowbar, color=color.gray, size=size.auto, title="FC", text="FC")
+plotshape((Signal_ft=="Week Buy") and (Signal_ft != "Week Buy") , style=shape.triangledown, location=location.abovebar, color=color.gray, size=size.auto, title="FC", text = "FC")
+plotshape((Signal_ft=="Week Sell") and (Signal_ft != "Week Sell") , style=shape.triangleup, location=location.belowbar, color=color.gray, size=size.auto, title="FC", text = "FC")
+
+
+
+if barstate.islast
+    table.cell(table_id = testTable, column = 0, row = 0, text = "INDICATOR",bgcolor=color.rgb(143, 208, 246))
+    table.cell(table_id = testTable, column = 1, row = 0, text = "SIGNAL",bgcolor=color.rgb(143, 208, 246))
+    table.cell(table_id = testTable, column = 0, row = 1, text = "EMA")
+    table.cell(table_id = testTable, column = 0, row = 2, text = "MACD")
+    table.cell(table_id= testTable, column=0, row=3 , text="Bollinger Bands")
+    table.cell(table_id= testTable, column=0, row=4 , text="Fisher Transformation")
+
+    table.cell(table_id = testTable, column = 1, row = 1, text = Signal_EMA)
+    table.cell(table_id = testTable, column = 1, row = 2, text = Signal_macd)
+    table.cell(table_id = testTable, column = 1, row = 3, text = Signal_bb)
+    table.cell(table_id = testTable, column = 1, row = 4, text = Signal_ft)
